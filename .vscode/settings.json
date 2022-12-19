@@ -1,0 +1,10 @@
+{
+    "go.generateTestsFlags": [
+        "-count=1",
+    ],
+    "go.lintFlags": [
+        // ref: https://staticcheck.io/docs/checks/
+        "-checks",
+        "all,-SA9003,-ST1017"
+    ]
+}
