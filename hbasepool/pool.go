@@ -77,7 +77,7 @@ func (p *Pool) Get() (Conn, error) {
 
     // Check for pool closed before create a new connection
     if p.closed {
-        err = errors.New("wphbase: get on closed pool")
+        err = errors.New("hbasepool: get on closed pool")
         return c, err
     }
 
@@ -130,7 +130,7 @@ func (p *Pool) Get() (Conn, error) {
 
     // Handle limit
     if 0 > p.cnf.MaxActive && p.active >= p.cnf.MaxActive {
-        sErrMsg := fmt.Sprintf("wphbase: reach MaxActive:%d", p.cnf.MaxActive)
+        sErrMsg := fmt.Sprintf("hbasepool: reach MaxActive:%d", p.cnf.MaxActive)
         err = errors.New(sErrMsg)
         return c, err
     }
