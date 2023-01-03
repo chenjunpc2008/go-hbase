@@ -66,8 +66,8 @@ Get gets a connection. The application must close the returned connection.
 func (p *Pool) Get() (Conn, error) {
 
     var (
-        c   Conn
-        err error
+        cUsable = Conn{Closed: true}
+        err     error
     )
 
     p.lazyInit()
@@ -78,7 +78,7 @@ func (p *Pool) Get() (Conn, error) {
     // Check for pool closed before create a new connection
     if p.closed {
         err = errors.New("hbasepool: get on closed pool")
-        return c, err
+        return cUsable, err
     }
 
     var (
@@ -92,6 +92,11 @@ func (p *Pool) Get() (Conn, error) {
             idleCleaned := make([]*poolConn, 0)
 
             for _, v := range p.idle {
+                if nil == v || nil == v.c.Client {
+                    // nil conn
+                    continue
+                }
+
                 tgap = tnow.Sub(v.t)
 
                 if tgap < p.cnf.IdleTimeout {
@@ -112,18 +117,18 @@ func (p *Pool) Get() (Conn, error) {
     // pick from idle list
     for 0 != len(p.idle) {
         // pick the first one
-        c = p.idle[0].c
+        cUsable = p.idle[0].c
         p.idle = p.idle[1:]
 
         if 0 > p.cnf.MaxConnLifetime {
-            tgap = tnow.Sub(c.CreateTime)
+            tgap = tnow.Sub(cUsable.CreateTime)
             if tgap < p.cnf.MaxConnLifetime {
                 // not expired
-                return c, nil
+                return cUsable, nil
             }
 
             // time out, close the connection
-            c.Close()
+            cUsable.Close()
             p.active--
         }
     }
@@ -132,17 +137,17 @@ func (p *Pool) Get() (Conn, error) {
     if 0 > p.cnf.MaxActive && p.active >= p.cnf.MaxActive {
         sErrMsg := fmt.Sprintf("hbasepool: reach MaxActive:%d", p.cnf.MaxActive)
         err = errors.New(sErrMsg)
-        return c, err
+        return cUsable, err
     }
 
-    c, err = NewConn(p.cnf.Host, p.cnf.Port)
+    cUsable, err = NewConn(p.cnf.Host, p.cnf.Port)
     if nil != err {
-        return c, err
+        return cUsable, err
     }
 
     p.active++
 
-    return c, nil
+    return cUsable, nil
 }
 
 /*
@@ -151,6 +156,12 @@ Put put connection back
 func (p *Pool) Put(c Conn) {
     p.mutex.Lock()
     defer p.mutex.Unlock()
+
+    if nil == c.Client {
+        // this connection is nil
+        p.active--
+        return
+    }
 
     if c.Closed {
         // this connection is err
@@ -185,6 +196,10 @@ func (p *Pool) Close() {
 
     if nil != p.idle {
         for _, v := range p.idle {
+            if nil == v || nil == v.c.Client {
+                continue
+            }
+
             v.c.Close()
         }
     }

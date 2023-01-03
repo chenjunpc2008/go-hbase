@@ -30,7 +30,7 @@ func NewConn(host string, port uint16) (Conn, error) {
         trans   thrift.TTransport
         client  *hbase.THBaseServiceClient
         err     error
-        c       Conn
+        c       = Conn{Closed: true}
     )
 
     portStr = fmt.Sprint(port)
