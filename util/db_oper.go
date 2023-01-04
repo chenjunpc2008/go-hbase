@@ -1,4 +1,4 @@
-package hbasepool
+package util
 
 import (
     "context"
