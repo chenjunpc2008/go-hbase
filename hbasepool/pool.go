@@ -120,7 +120,7 @@ func (p *Pool) Get() (Conn, error) {
         cUsable = p.idle[0].c
         p.idle = p.idle[1:]
 
-        if 0 > p.cnf.MaxConnLifetime {
+        if 0 < p.cnf.MaxConnLifetime {
             tgap = tnow.Sub(cUsable.CreateTime)
             if tgap < p.cnf.MaxConnLifetime {
                 // not expired
@@ -130,11 +130,14 @@ func (p *Pool) Get() (Conn, error) {
             // time out, close the connection
             cUsable.Close()
             p.active--
+        } else {
+            // no life time limit
+            return cUsable, nil
         }
     }
 
     // Handle limit
-    if 0 > p.cnf.MaxActive && p.active >= p.cnf.MaxActive {
+    if 0 < p.cnf.MaxActive && p.active >= p.cnf.MaxActive {
         sErrMsg := fmt.Sprintf("hbasepool: reach MaxActive:%d", p.cnf.MaxActive)
         err = errors.New(sErrMsg)
         return cUsable, err
