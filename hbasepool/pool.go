@@ -181,6 +181,8 @@ func (p *Pool) Put(c Conn) {
         if len(p.idle) >= p.cnf.MaxIdle {
             // reach limit
             c.Close()
+
+            p.active--
             return
         }
     }
